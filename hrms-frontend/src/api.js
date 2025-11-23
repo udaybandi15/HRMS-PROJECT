@@ -1,7 +1,10 @@
 import axios from "axios";
 
+const backendUrl =
+  import.meta.env.VITE_API_URL || "https://hrms-project-1-7hk4.onrender.com";
+
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: backendUrl,
 });
 
 // Automatically add token to every request
