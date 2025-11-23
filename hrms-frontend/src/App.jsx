@@ -11,14 +11,12 @@ import api from "./api";
 import "./App.css";
 
 // --- HELPER: Redirect to Dashboard if already logged in ---
-// This wrapper checks if a token exists. If yes, it pushes you to Dashboard.
 const PublicRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? <Navigate to="/dashboard" replace /> : children;
 };
 
-// --- HELPER: Protect Dashboard ---
-// This checks if token is missing. If yes, pushes you to Login.
+// --- HELPER: Protect Dashboard (Redirect to Login if not logged in) ---
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/" replace />;
@@ -88,7 +86,7 @@ function Register() {
       localStorage.setItem("token", res.data.token);
       navigate("/dashboard");
     } catch (err) {
-      alert("Registration failed");
+      alert("Registration failed. Email might be taken.");
     }
   };
 
@@ -236,6 +234,8 @@ function Logs() {
 function Dashboard() {
   const [employees, setEmployees] = useState([]);
   const [teams, setTeams] = useState([]);
+
+  // State for Forms
   const [empForm, setEmpForm] = useState({
     id: null,
     first_name: "",
@@ -243,6 +243,7 @@ function Dashboard() {
   });
   const [newTeam, setNewTeam] = useState("");
   const [assignData, setAssignData] = useState({ employeeId: "", teamId: "" });
+
   const navigate = useNavigate();
 
   const fetchData = async () => {
@@ -263,6 +264,7 @@ function Dashboard() {
     fetchData();
   }, []);
 
+  // --- EMPLOYEE LOGIC ---
   const handleEmpSubmit = async (e) => {
     e.preventDefault();
     if (empForm.id) {
@@ -275,7 +277,7 @@ function Dashboard() {
   };
 
   const deleteEmployee = async (id) => {
-    if (!confirm("Are you sure?")) return;
+    if (!confirm("Are you sure you want to delete this employee?")) return;
     await api.delete(`/employees/${id}`);
     fetchData();
   };
@@ -284,6 +286,7 @@ function Dashboard() {
     setEmpForm({ id: emp.id, first_name: emp.first_name, email: emp.email });
   };
 
+  // --- TEAM LOGIC ---
   const addTeam = async (e) => {
     e.preventDefault();
     await api.post("/teams", { name: newTeam });
@@ -329,6 +332,7 @@ function Dashboard() {
       </nav>
 
       <div className="grid-layout">
+        {/* LEFT COLUMN: EMPLOYEES */}
         <div className="card">
           <h3>{empForm.id ? "Edit Employee" : "Add Employee"}</h3>
           <form onSubmit={handleEmpSubmit} style={{ marginBottom: "20px" }}>
@@ -365,6 +369,7 @@ function Dashboard() {
               )}
             </div>
           </form>
+
           <h4>Employee List</h4>
           <ul>
             {employees.map((e) => (
@@ -374,23 +379,52 @@ function Dashboard() {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  marginBottom: "10px",
+                  padding: "10px",
+                  background: "#fff",
+                  borderRadius: "8px",
+                  border: "1px solid #eee",
                 }}
               >
+                {/* Employee Info + Teams Display */}
                 <div>
                   <strong>{e.first_name}</strong>
                   <br />
-                  <small>{e.email}</small>
+                  <small style={{ color: "#666" }}>{e.email}</small>
+                  <br />
+                  <small style={{ color: "#4f46e5", fontWeight: "bold" }}>
+                    {e.Teams && e.Teams.length > 0
+                      ? "Teams: " + e.Teams.map((t) => t.name).join(", ")
+                      : "No Teams Assigned"}
+                  </small>
                 </div>
+
+                {/* Edit/Delete Buttons */}
                 <div style={{ display: "flex", gap: "5px" }}>
                   <button
                     onClick={() => editEmployee(e)}
-                    style={{ cursor: "pointer", padding: "5px" }}
+                    style={{
+                      cursor: "pointer",
+                      padding: "5px",
+                      border: "none",
+                      background: "none",
+                      fontSize: "1.2rem",
+                    }}
+                    title="Edit"
                   >
                     ✏️
                   </button>
                   <button
                     onClick={() => deleteEmployee(e.id)}
-                    style={{ cursor: "pointer", padding: "5px", color: "red" }}
+                    style={{
+                      cursor: "pointer",
+                      padding: "5px",
+                      color: "red",
+                      border: "none",
+                      background: "none",
+                      fontSize: "1.2rem",
+                    }}
+                    title="Delete"
                   >
                     🗑️
                   </button>
@@ -400,6 +434,7 @@ function Dashboard() {
           </ul>
         </div>
 
+        {/* RIGHT COLUMN: TEAMS */}
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
           <div className="card">
             <h3>Manage Teams</h3>
@@ -487,7 +522,6 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* If logged in, go to Dashboard. Else show Login */}
         <Route
           path="/"
           element={
@@ -496,8 +530,6 @@ function App() {
             </PublicRoute>
           }
         />
-
-        {/* If logged in, go to Dashboard. Else show Register */}
         <Route
           path="/register"
           element={
@@ -506,8 +538,6 @@ function App() {
             </PublicRoute>
           }
         />
-
-        {/* If NOT logged in, go to Login. Else show Dashboard */}
         <Route
           path="/dashboard"
           element={
@@ -516,7 +546,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/logs"
           element={
